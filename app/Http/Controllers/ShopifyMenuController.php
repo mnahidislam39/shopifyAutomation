@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -8,17 +7,88 @@ use Illuminate\Support\Str;
 
 class ShopifyMenuController extends Controller
 {
-    public function createMenu(Request $request)
+    public function getCollections(Request $request)
     {
-        $shopDomain = $request->input('shop_domain');
+        $shopDomain  = $request->input('shop_domain');
         $accessToken = $request->input('access_token');
-        $menuTitle = $request->input('title', 'Main Navigation');
-        $menuItems = $request->input('items', []);
 
-        if (!$shopDomain || !$accessToken) {
+        if (! $shopDomain || ! $accessToken) {
             return response()->json([
                 'success' => false,
-                'message' => 'Shop domain and Access token are required.'
+                'message' => 'Shop domain and Access token are required.',
+            ], 400);
+        }
+
+        $query = '
+        {
+          collections(first: 50) {
+            edges {
+              node {
+                id
+                title
+                handle
+                seo {
+                  title
+                }
+              }
+            }
+          }
+        }
+    ';
+
+        try {
+            $response = Http::withHeaders([
+                'X-Shopify-Access-Token' => $accessToken,
+                'Content-Type'           => 'application/json',
+                'Accept'                 => 'application/json',
+            ])->post("https://{$shopDomain}/admin/api/2026-01/graphql.json", [
+                'query' => $query,
+            ]);
+
+            $responseData = $response->json();
+
+            if (isset($responseData['errors'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'GraphQL API Error: ' . json_encode($responseData['errors']),
+                ], 422);
+            }
+
+            $edges       = $responseData['data']['collections']['edges'] ?? [];
+            $collections = [];
+
+            foreach ($edges as $edge) {
+                $node          = $edge['node'];
+                $collections[] = [
+                    'id'    => $node['id'],
+                    'title' => $node['title'],
+                    'url'   => '/collections/' . $node['handle'],
+                ];
+            }
+
+            return response()->json([
+                'success'     => true,
+                'collections' => $collections,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function createMenu(Request $request)
+    {
+        $shopDomain  = $request->input('shop_domain');
+        $accessToken = $request->input('access_token');
+        $menuTitle   = $request->input('title', 'Main Navigation');
+        $menuItems   = $request->input('items', []);
+
+        if (! $shopDomain || ! $accessToken) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Shop domain and Access token are required.',
             ], 400);
         }
 
@@ -41,18 +111,18 @@ class ShopifyMenuController extends Controller
         ';
 
         $variables = [
-            'title' => $menuTitle,
+            'title'  => $menuTitle,
             'handle' => $menuHandle,
-            'items' => $this->formatMenuItemsForGraphQL($menuItems, $shopDomain, $accessToken)
+            'items'  => $this->formatMenuItemsForGraphQL($menuItems, $shopDomain, $accessToken),
         ];
 
         try {
             $response = Http::withHeaders([
                 'X-Shopify-Access-Token' => $accessToken,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json'
+                'Content-Type'           => 'application/json',
+                'Accept'                 => 'application/json',
             ])->post("https://{$shopDomain}/admin/api/2026-01/graphql.json", [
-                'query' => $query,
+                'query'     => $query,
                 'variables' => $variables,
             ]);
 
@@ -61,30 +131,30 @@ class ShopifyMenuController extends Controller
             if (isset($responseData['errors'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'GraphQL API Error: ' . json_encode($responseData['errors'])
+                    'message' => 'GraphQL API Error: ' . json_encode($responseData['errors']),
                 ], 422);
             }
 
-            if (!empty($responseData['data']['menuCreate']['userErrors'])) {
+            if (! empty($responseData['data']['menuCreate']['userErrors'])) {
                 $userErrors = $responseData['data']['menuCreate']['userErrors'];
-                $errorMsg = implode(', ', array_column($userErrors, 'message'));
+                $errorMsg   = implode(', ', array_column($userErrors, 'message'));
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Shopify Error: ' . $errorMsg
+                    'message' => 'Shopify Error: ' . $errorMsg,
                 ], 422);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Menu and nested sub-menus created successfully!',
-                'data' => $responseData['data']['menuCreate']['menu'] ?? null
+                'data'    => $responseData['data']['menuCreate']['menu'] ?? null,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Server Error: ' . $e->getMessage()
+                'message' => 'Server Error: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -95,13 +165,13 @@ class ShopifyMenuController extends Controller
         $formatted = [];
 
         foreach ($items as $item) {
-            $url = (string) ($item['url'] ?? '/');
+            $url  = (string) ($item['url'] ?? '/');
             $type = $this->detectMenuItemType($url);
 
             $node = [
                 'title' => (string) ($item['title'] ?? 'Menu Item'),
-                'type' => $type,
-                'url' => $this->normalizeUrl($url, $shopDomain)
+                'type'  => $type,
+                'url'   => $this->normalizeUrl($url, $shopDomain),
             ];
 
             // Fetch Resource ID for native icons
@@ -111,7 +181,7 @@ class ShopifyMenuController extends Controller
             }
 
             // Recursive check for sub-menus inside sub-menus
-            if (!empty($item['items']) && is_array($item['items'])) {
+            if (! empty($item['items']) && is_array($item['items'])) {
                 $node['items'] = $this->formatMenuItemsForGraphQL($item['items'], $shopDomain, $accessToken);
             }
 
@@ -169,7 +239,7 @@ class ShopifyMenuController extends Controller
                 $collections = $res->json()['smart_collections'] ?? [];
             }
 
-            if (!empty($collections[0]['id'])) {
+            if (! empty($collections[0]['id'])) {
                 return "gid://shopify/Collection/" . $collections[0]['id'];
             }
         }
@@ -182,7 +252,7 @@ class ShopifyMenuController extends Controller
                 ->get("https://{$shopDomain}/admin/api/2026-01/pages.json?handle={$handle}");
 
             $pages = $res->json()['pages'] ?? [];
-            if (!empty($pages[0]['id'])) {
+            if (! empty($pages[0]['id'])) {
                 return "gid://shopify/Page/" . $pages[0]['id'];
             }
         }
