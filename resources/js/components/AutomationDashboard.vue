@@ -1,20 +1,26 @@
 <template>
-  <div style="max-width: 950px; margin: 30px auto; font-family: system-ui, sans-serif; padding: 0 15px;">
+  <div class="max-w-[950px] mx-auto my-[50px] font-sans">
 
     <!-- Top Navigation Tabs -->
-    <div style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #e1e3e5; padding-bottom: 10px;">
+    <div class="flex gap-3 mb-[25px] border-b-2 border-[#e1e3e5] pb-3">
       <button
         @click="activeTab = 'collections'"
-        :style="tabButtonStyle(activeTab === 'collections')"
+        :class="[
+          'px-5 py-2.5 text-[15px] font-bold cursor-pointer rounded-md border-none transition-all duration-200',
+          activeTab === 'collections' ? 'bg-[#008060] text-white shadow-sm' : 'bg-[#f1f2f3] text-[#333333] hover:bg-[#e4e5e7]'
+        ]"
       >
         📂 Bulk Collections
       </button>
 
       <button
         @click="activeTab = 'menus'"
-        :style="tabButtonStyle(activeTab === 'menus')"
+        :class="[
+          'px-5 py-2.5 text-[15px] font-bold cursor-pointer rounded-md border-none transition-all duration-200',
+          activeTab === 'menus' ? 'bg-[#008060] text-white shadow-sm' : 'bg-[#f1f2f3] text-[#333333] hover:bg-[#e4e5e7]'
+        ]"
       >
-        🔗 Header & Navigation Menus
+        🔗 Bulk Navigation Menus
       </button>
     </div>
 
@@ -26,8 +32,10 @@
     <div v-if="activeTab === 'menus'">
       <MenuAutomator />
     </div>
-
+<!-- Toast Notification Component এখানে কল করুন -->
+    <Toast />
   </div>
+
 </template>
 
 <script>
@@ -43,21 +51,6 @@ export default {
     return {
       activeTab: 'collections'
     };
-  },
-  methods: {
-    tabButtonStyle(isActive) {
-      return {
-        padding: '10px 20px',
-        fontSize: '15px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        borderRadius: '6px',
-        border: 'none',
-        backgroundColor: isActive ? '#008060' : '#f1f2f3',
-        color: isActive ? '#ffffff' : '#333333',
-        transition: 'all 0.2s ease'
-      };
-    }
   }
 };
 </script>

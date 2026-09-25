@@ -1,109 +1,115 @@
 <template>
-  <div style="padding: 24px; background: #ffffff; border-radius: 8px; border: 1px solid #e1e3e5; max-width: 900px; margin: 0 auto;">
-    <h2 style="color: #202223; margin-top: 0; margin-bottom: 20px; font-size: 20px;">
+  <div class="max-w-4xl mx-auto my-10 bg-white p-8 border border-gray-200 rounded-xl shadow-sm relative">
+    <h2 class="text-2xl font-bold text-slate-800 text-center mb-6">
       Shopify Header & Navigation Creator (Nested Sub-menus)
     </h2>
 
-    <form @submit.prevent="submitMenu">
-      <!-- Domain & Token -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+    <form @submit.prevent="submitMenu" class="space-y-5">
+      <!-- Store Domain & Admin Access Token Side by Side -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Store Domain:</label>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Store Domain:</label>
           <input
             v-model="form.shop_domain"
             placeholder="example.myshopify.com"
-            style="width: 100%; padding: 8px 12px; border: 1px solid #c9cccf; border-radius: 4px; box-sizing: border-box;"
+            class="w-full px-4 py-2.5 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all"
             required
           />
         </div>
         <div>
-          <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Admin Access Token:</label>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Admin Access Token:</label>
           <input
             v-model="form.access_token"
             type="password"
             placeholder="shpat_xxxxxxxxxxxxxxxx"
-            style="width: 100%; padding: 8px 12px; border: 1px solid #c9cccf; border-radius: 4px; box-sizing: border-box;"
+            class="w-full px-4 py-2.5 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all"
             required
           />
         </div>
       </div>
 
       <!-- Action Control Buttons -->
-<!-- Action Control Buttons -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #f6f6f7; padding: 10px; border-radius: 6px; flex-wrap: wrap; gap: 10px;">
-  <span style="font-size: 13px; font-weight: 600; color: #4a4a4a;">Templates & Import:</span>
-  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-    <button
-      type="button"
-      @click="fetchExistingCollections"
-      :disabled="fetching"
-      style="padding: 6px 12px; background-color: #005bd3; color: white; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;"
-    >
-      {{ fetching ? 'Fetching...' : '⚡ Auto Fetch' }}
-    </button>
-    <button
-      type="button"
-      @click="loadTemplate('normal')"
-      style="padding: 6px 12px; background-color: #303030; color: white; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;"
-    >
-      📄 Normal Menu
-    </button>
-    <button
-      type="button"
-      @click="loadTemplate('submenu')"
-      style="padding: 6px 12px; background-color: #5c5f62; color: white; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;"
-    >
-      📂 With Sub-menu
-    </button>
-    <button
-      type="button"
-      @click="loadTemplate('nested')"
-      style="padding: 6px 12px; background-color: #108043; color: white; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;"
-    >
-      🌲 Nested Sub-menu
-    </button>
-  </div>
-</div>
+      <div class="flex justify-between items-center bg-gray-50 p-3.5 rounded-lg flex-wrap gap-3 border border-gray-100">
+        <span class="text-xs font-semibold text-gray-600">Templates & Import:</span>
+        <div class="flex gap-2 flex-wrap">
+          <button
+            type="button"
+            @click="fetchExistingCollections"
+            :disabled="fetching"
+            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white border-none rounded-md text-xs font-semibold cursor-pointer transition-colors disabled:opacity-50"
+          >
+            {{ fetching ? 'Fetching...' : '⚡ Auto Fetch' }}
+          </button>
+          <button
+            type="button"
+            @click="loadTemplate('normal')"
+            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white border-none rounded-md text-xs font-semibold cursor-pointer transition-colors"
+          >
+            📄 Normal Menu
+          </button>
+          <button
+            type="button"
+            @click="loadTemplate('submenu')"
+            class="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white border-none rounded-md text-xs font-semibold cursor-pointer transition-colors"
+          >
+            📂 With Sub-menu
+          </button>
+          <button
+            type="button"
+            @click="loadTemplate('nested')"
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white border-none rounded-md text-xs font-semibold cursor-pointer transition-colors"
+          >
+            🌲 Nested Sub-menu
+          </button>
+        </div>
+      </div>
+
       <!-- Menu Title -->
-      <div style="margin-bottom: 15px;">
-        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Menu Title:</label>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Menu Title:</label>
         <input
           v-model="form.menu_title"
           placeholder="Main Navigation"
-          style="width: 100%; padding: 8px 12px; border: 1px solid #c9cccf; border-radius: 4px; box-sizing: border-box;"
+          class="w-full px-4 py-2.5 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all"
           required
         />
       </div>
 
       <!-- JSON Structure Area -->
-      <div style="margin-bottom: 20px;">
-        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Menu JSON Structure (Supports Multi-level Nested Sub-menus):</label>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Menu JSON Structure (Supports Multi-level Nested Sub-menus):</label>
         <textarea
           v-model="jsonInput"
-          rows="16"
-          style="width: 100%; padding: 12px; font-family: monospace; font-size: 13px; border: 1px solid #c9cccf; border-radius: 4px; background: #f9fafb; box-sizing: border-box;"
+          rows="14"
+          class="w-full p-4 font-mono text-sm text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all"
           required
         ></textarea>
+      </div>
+
+      <!-- Live Timer & Progress Bar (Visible when loading) -->
+      <div v-if="loading" class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between shadow-inner transition-all">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl animate-spin">⏳</span>
+          <div>
+            <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Creating Menu...</p>
+            <p class="text-sm font-mono font-semibold text-emerald-900">Time Elapsed: {{ elapsedTime }}s</p>
+          </div>
+        </div>
+        <div class="w-32 bg-emerald-200 rounded-full h-2.5 overflow-hidden">
+          <div class="bg-emerald-600 h-2.5 rounded-full animate-pulse w-full"></div>
+        </div>
       </div>
 
       <!-- Submit Button -->
       <button
         type="submit"
         :disabled="loading"
-        style="width: 100%; padding: 12px; background-color: #008060; color: #ffffff; font-weight: bold; font-size: 15px; border: none; border-radius: 4px; cursor: pointer;"
+        class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow-md transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
       >
-        {{ loading ? 'Creating Nested Navigation...' : 'Create Navigation Menu' }}
+        <span v-if="loading" class="animate-spin text-lg">🕒</span>
+        <span>{{ loading ? `Creating Navigation (${elapsedTime}s)...` : 'Create Navigation Menu' }}</span>
       </button>
     </form>
-
-    <!-- Response Message -->
-    <div
-      v-if="result"
-      style="margin-top: 20px; padding: 12px 15px; border-radius: 4px; font-size: 14px;"
-      :style="{ backgroundColor: result.success ? '#e6f4ea' : '#fce8e6', color: result.success ? '#137333' : '#c5221f' }"
-    >
-      <strong>Status:</strong> {{ result.message }}
-    </div>
   </div>
 </template>
 
@@ -164,20 +170,38 @@ export default {
       jsonInput: JSON.stringify(templates.submenu, null, 2),
       loading: false,
       fetching: false,
-      result: null
+      elapsedTime: 0,
+      timerInterval: null
     };
   },
   methods: {
+    startTimer() {
+      this.elapsedTime = 0;
+      if (this.timerInterval) clearInterval(this.timerInterval);
+      this.timerInterval = setInterval(() => {
+        this.elapsedTime++;
+      }, 1000);
+    },
+    stopTimer() {
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    },
     loadTemplate(type) {
       if (templates[type]) {
         this.jsonInput = JSON.stringify(templates[type], null, 2);
-        this.result = { success: true, message: `Loaded ${type} menu template successfully!` };
+        if (typeof window.showToast === 'function') {
+          window.showToast('Template Loaded! ✨', `Loaded ${type} menu template successfully!`, 'success');
+        }
       }
     },
 
     async fetchExistingCollections() {
       if (!this.form.shop_domain || !this.form.access_token) {
-        alert('Please enter Store Domain and Access Token first!');
+        if (typeof window.showToast === 'function') {
+          window.showToast('Missing Info ⚠️', 'Please enter Store Domain and Access Token first!', 'error');
+        }
         return;
       }
 
@@ -205,16 +229,14 @@ export default {
           ];
 
           this.jsonInput = JSON.stringify(autoMenu, null, 2);
-          this.result = {
-            success: true,
-            message: `Successfully fetched ${collections.length} collections into sub-menu!`
-          };
+          if (typeof window.showToast === 'function') {
+            window.showToast('Fetched! 🚀', `Successfully fetched ${collections.length} collections into sub-menu!`, 'success');
+          }
         }
       } catch (err) {
-        this.result = {
-          success: false,
-          message: 'Failed to fetch collections. Check Store Domain and Access Token.'
-        };
+        if (typeof window.showToast === 'function') {
+          window.showToast('Failed ❌', 'Failed to fetch collections. Check Store Domain and Access Token.', 'error');
+        }
       } finally {
         this.fetching = false;
       }
@@ -223,7 +245,7 @@ export default {
     async submitMenu() {
       try {
         this.loading = true;
-        this.result = null;
+        this.startTimer();
 
         const response = await axios.post('/api/create-menu', {
           shop_domain: this.form.shop_domain,
@@ -232,17 +254,17 @@ export default {
           items: JSON.parse(this.jsonInput)
         });
 
-        this.result = {
-          success: true,
-          message: response.data.message || 'Menu created successfully!'
-        };
+        if (typeof window.showToast === 'function') {
+          window.showToast('Success! 🎉', `${response.data.message || 'Menu created successfully!'} (Took ${this.elapsedTime}s)`, 'success');
+        }
       } catch (error) {
-        this.result = {
-          success: false,
-          message: error.response?.data?.message || 'Failed to create menu.'
-        };
+        const errorMsg = error.response?.data?.message || 'Failed to create menu.';
+        if (typeof window.showToast === 'function') {
+          window.showToast('Oops... ❌', `${errorMsg} (Took ${this.elapsedTime}s)`, 'error');
+        }
       } finally {
         this.loading = false;
+        this.stopTimer();
       }
     }
   }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Models\ShopifyCollection;
 
 class ShopifyCollectionController extends Controller
 {
@@ -72,6 +73,25 @@ class ShopifyCollectionController extends Controller
                 }
 
                 if ($response->successful()) {
+                    $responseData = $response->json();
+
+                    $createdData = $responseData['smart_collection'] ?? $responseData['custom_collection'] ?? [];
+                    $shopifyId = $createdData['id'] ?? null;
+                    $createdHandle = $createdData['handle'] ?? $handle;
+
+                    // ---> এখানে ডাটাবেজে সব ফিল্ড সেভ করা হচ্ছে <---
+                    ShopifyCollection::create([
+                        'shop_domain'     => $shopDomain,
+                        'shopify_id'      => $shopifyId ? "gid://shopify/Collection/" . $shopifyId : null,
+                        'title'           => $title,
+                        'handle'          => $createdHandle,
+                        'type'            => $type,
+                        'description'     => $description,
+                        'template_suffix' => $templateSuffix,
+                        'image_url'       => $imageUrl,
+                        'status'          => 'success',
+                    ]);
+
                     $results[] = [
                         'title' => $title,
                         'status' => 'success',

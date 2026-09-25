@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\ShopifyMenu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -145,10 +146,23 @@ class ShopifyMenuController extends Controller
                 ], 422);
             }
 
+            $createdMenu = $responseData['data']['menuCreate']['menu'] ?? null;
+
+            // ---> EKHANE LOCAL DATABASE-E SAVE KORAR KAJ <---
+            if ($createdMenu) {
+                ShopifyMenu::create([
+                    'shop_domain'     => $shopDomain,
+                    'menu_title'      => $menuTitle,
+                    'menu_handle'     => $createdMenu['handle'] ?? $menuHandle,
+                    'menu_items'      => $menuItems,         // Frontend theke asha items array
+                    'shopify_menu_id' => $createdMenu['id'], // Shopify GID
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Menu and nested sub-menus created successfully!',
-                'data'    => $responseData['data']['menuCreate']['menu'] ?? null,
+                'message' => 'Menu created and saved to database successfully!',
+                'data'    => $createdMenu,
             ]);
 
         } catch (\Exception $e) {

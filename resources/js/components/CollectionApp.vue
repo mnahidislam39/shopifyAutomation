@@ -1,46 +1,83 @@
 <template>
-    <div
-        style="max-width: 700px; margin: 40px auto; font-family: system-ui, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <h2 style="color: #2c3e50; text-align: center; margin-bottom: 20px;">Shopify Bulk Collection Automator</h2>
+    <div class="max-w-4xl mx-auto my-10 bg-white p-8 border border-gray-200 rounded-xl shadow-sm relative">
+        <h2 class="text-2xl font-bold text-slate-800 text-center mb-8">Shopify Bulk Collection Automator</h2>
 
-        <form @submit.prevent="submitCollections">
-            <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold;">Store Domain:</label>
-                <input v-model="form.shop_domain" placeholder="example.myshopify.com"
-                    style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
-                    required />
+        <form @submit.prevent="submitCollections" class="space-y-6">
+            <!-- Store Domain & Admin Access Token Side by Side -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Store Domain:</label>
+                    <input v-model="form.shop_domain" placeholder="example.myshopify.com"
+                        class="w-full px-4 py-2.5 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all"
+                        required />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Admin Access Token:</label>
+                    <input v-model="form.access_token" type="password" placeholder="shpat_xxxxxxxxxxxxxxxxxxxx"
+                        class="w-full px-4 py-2.5 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all"
+                        required />
+                </div>
             </div>
 
-            <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold;">Admin Access Token:</label>
-                <input v-model="form.access_token" type="password" placeholder="shpat_xxxxxxxxxxxxxxxxxxxx"
-                    style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
-                    required />
-            </div>
-
-            <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold;">Collections JSON Payload:</label>
+            <!-- Collections JSON Payload -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Collections JSON Payload:</label>
                 <textarea v-model="jsonInput" rows="10"
-                    style="width: 100%; padding: 10px; margin-top: 5px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+                    class="w-full p-4 font-mono text-sm text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all"
                     required></textarea>
             </div>
 
+            <!-- Live Timer & Progress Bar (Visible when loading) -->
+            <div v-if="loading"
+                class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between shadow-inner transition-all">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl animate-spin">⏳</span>
+                    <div>
+                        <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Processing Request...</p>
+                        <p class="text-sm font-mono font-semibold text-emerald-900">Time Elapsed: {{ elapsedTime }}s</p>
+                    </div>
+                </div>
+                <div class="w-32 bg-emerald-200 rounded-full h-2.5 overflow-hidden">
+                    <div class="bg-emerald-600 h-2.5 rounded-full animate-pulse w-full"></div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
             <button type="submit" :disabled="loading"
-                style="width: 100%; padding: 12px; background-color: #008060; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">
-                {{ loading ? 'Processing & Saving...' : 'Run Bulk Creation' }}
+                class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
+                <span v-if="loading" class="animate-spin text-lg">🕒</span>
+                <span>{{ loading ? `Processing (${elapsedTime}s)...` : 'Run Bulk Creation' }}</span>
             </button>
         </form>
 
-        <!-- v-if="results && results.length" নিরাপদ কন্ডিশন -->
-        <div v-if="results && results.length" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
-            <h3>Execution & Database Status:</h3>
-            <ul style="list-style-type: none; padding: 0;">
-                <li v-for="(item, index) in results" :key="index"
-                    :style="{ padding: '10px', margin: '8px 0', borderRadius: '4px', backgroundColor: item.status === 'success' ? '#e6f4ea' : '#fce8e6' }">
-                    <strong>{{ item.title }}</strong>: {{ item.status ? item.status.toUpperCase() : 'ERROR' }}
-                    <span v-if="item.message"> - {{ item.message }}</span>
-                </li>
-            </ul>
+        <!-- Execution & Database Status Summary & Grid List -->
+        <div v-if="results && results.length" class="mt-8 pt-6 border-t border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Execution & Database Status:</h3>
+                <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
+                    Total Created: {{ results.length }}
+                </span>
+            </div>
+
+            <!-- Grid Layout to Save Vertical Space -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div v-for="(item, index) in results" :key="index" :class="[
+                    'p-3 rounded-lg border text-xs transition-all flex flex-col justify-between shadow-xs',
+                    item.status === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'
+                ]">
+                    <div>
+                        <span class="font-bold block truncate text-sm mb-1" :title="item.title">{{ item.title }}</span>
+                        <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                            :class="item.status === 'success' ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'">
+                            {{ item.status ? item.status : 'ERROR' }}
+                        </span>
+                    </div>
+                    <span v-if="item.message" class="mt-2 text-[11px] opacity-80 truncate" :title="item.message">
+                        {{ item.message }}
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -53,13 +90,12 @@ export default {
         return {
             form: { shop_domain: '', access_token: '' },
             jsonInput: JSON.stringify([
-                // ১. কাস্টম টেমপ্লেটসহ স্মার্ট কালেকশন (উদাহরণ: 'grid-layout')
                 {
                     "type": "smart",
                     "title": "Smart Helmets 2026",
                     "handle": "smart-helmets-2026",
                     "description": "<h2>Best Safety Helmets</h2><p>Explore high quality protective gear.</p>",
-                    "template_suffix": "grid-layout", // <-- কাস্টম টেমপ্লেট বসবে (collection.grid-layout.json)
+                    "template_suffix": "grid-layout",
                     "image_url": "https://cdn.shopify.com/s/files/1/0589/6968/6134/files/Sdad449d0179040a6a0e886e06795be260.webp?v=1788792579",
                     "rules": [
                         {
@@ -68,174 +104,73 @@ export default {
                             "condition": "helmet"
                         }
                     ]
-                },
-
-                // ২. ডিফল্ট টেমপ্লেট (template_suffix ফাঁকা রাখলে অটোমেটিক Default Collection বসবে)
-                {
-                    "type": "smart",
-                    "title": "Riding Jackets",
-                    "handle": "riding-jackets",
-                    "description": "<p>Durable and all-weather motorcycle riding jackets.</p>",
-                    "template_suffix": "", // <-- ফাঁকা রাখায় 'Default collection' টেমপ্লেট সেট হবে
-                    "rules": [
-                        {
-                            "column": "tag",
-                            "relation": "equals",
-                            "condition": "jacket"
-                        }
-                    ]
-                },
-
-                // ৩. কাস্টম টেমপ্লেটসহ স্মার্ট কালেকশন (উদাহরণ: 'sidebar-filter')
-                {
-                    "type": "smart",
-                    "title": "Motorcycle Gloves",
-                    "handle": "motorcycle-gloves",
-                    "description": "<p>Premium leather and protective racing gloves.</p>",
-                    "template_suffix": "sidebar-filter", // <-- নির্দিষ্ট কাস্টম টেমপ্লেট বসবে
-                    "rules": [
-                        {
-                            "column": "tag",
-                            "relation": "equals",
-                            "condition": "gloves"
-                        }
-                    ]
-                },
-
-                // ৪. template_suffix না দিলে (অটোমেটিক Default বসবে)
-                {
-                    "type": "smart",
-                    "title": "Riding Boots",
-                    "handle": "riding-boots",
-                    "description": "<p>Heavy duty boots for maximum safety.</p>",
-                    // "template_suffix" ফিল্ডটি বাদ রাখলেও ডিফল্টভাবে 'Default collection' নিবে
-                    "rules": [
-                        {
-                            "column": "tag",
-                            "relation": "equals",
-                            "condition": "boots"
-                        }
-                    ]
-                },
-
-                // ৫. কাস্টম টেমপ্লেট (উদাহরণ: 'full-width')
-                {
-                    "type": "smart",
-                    "title": "Armor & Protectors",
-                    "handle": "armor-protectors",
-                    "description": "<p>Back, chest, and knee guards for bikers.</p>",
-                    "template_suffix": "full-width", // <-- কাস্টম ফুল-উইডথ টেমপ্লেট
-                    "rules": [
-                        {
-                            "column": "type",
-                            "relation": "equals",
-                            "condition": "Protection"
-                        }
-                    ]
-                },
-
-                // ৬. ডিফল্ট টেমপ্লেট
-                {
-                    "type": "smart",
-                    "title": "Biker Accessories",
-                    "handle": "biker-accessories",
-                    "description": "<p>Keychains, tank pads, and intercom devices.</p>",
-                    "template_suffix": "", // <-- 'Default collection' বসবে
-                    "rules": [
-                        {
-                            "column": "tag",
-                            "relation": "equals",
-                            "condition": "accessory"
-                        }
-                    ]
-                },
-
-                // ৭. কাস্টম টেমপ্লেট (উদাহরণ: 'banner-header')
-                {
-                    "type": "smart",
-                    "title": "New Arrivals 2026",
-                    "handle": "new-arrivals-2026",
-                    "description": "<p>Latest gear added recently to our inventory.</p>",
-                    "template_suffix": "banner-header", // <-- কাস্টম ব্যানার টেমপ্লেট
-                    "rules": [
-                        {
-                            "column": "variant_price",
-                            "relation": "greater_than",
-                            "condition": "0"
-                        }
-                    ]
-                },
-
-                // ৮. ডিফল্ট টেমপ্লেট
-                {
-                    "type": "smart",
-                    "title": "Clearance Sale Items",
-                    "handle": "clearance-sale-items",
-                    "description": "<p>Discounted products with special pricing.</p>",
-                    "template_suffix": "", // <-- 'Default collection' বসবে
-                    "rules": [
-                        {
-                            "column": "tag",
-                            "relation": "equals",
-                            "condition": "sale"
-                        }
-                    ]
-                },
-
-                // ==========================================
-                // CUSTOM / MANUAL COLLECTIONS (মোট ২টি)
-                // ==========================================
-
-                // ৯. কাস্টম টেমপ্লেটসহ ম্যানুয়াল কালেকশন (উদাহরণ: 'promotional-layout')
-                {
-                    "type": "custom",
-                    "title": "Manual Sale Offer",
-                    "handle": "manual-sale-offer",
-                    "description": "<p>Hand-picked promotional products for special offers.</p>",
-                    "template_suffix": "promotional-layout" // <-- কাস্টম প্রমোশনাল টেমপ্লেট
-                },
-
-                // ১০. ডিফল্ট টেমপ্লেটসহ ম্যানুয়াল কালেকশন
-                {
-                    "type": "custom",
-                    "title": "Featured Best Sellers",
-                    "handle": "featured-best-sellers",
-                    "description": "<p>Manually curated top trending items.</p>",
-                    "template_suffix": "" // <-- 'Default collection' বসবে
                 }
             ], null, 2),
             loading: false,
-            results: []
+            results: [],
+            elapsedTime: 0,
+            timerInterval: null
         }
     },
-methods: {
-  async submitCollections() {
-    try {
-      this.loading = true;
-      this.results = [];
-      const collectionsArray = JSON.parse(this.jsonInput);
+    methods: {
+        startTimer() {
+            this.elapsedTime = 0;
+            if (this.timerInterval) clearInterval(this.timerInterval);
+            this.timerInterval = setInterval(() => {
+                this.elapsedTime++;
+            }, 1000);
+        },
+        stopTimer() {
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+        },
+        async submitCollections() {
+            try {
+                this.loading = true;
+                this.results = [];
+                this.startTimer(); // টাইমার চালু করা হলো
 
-      const response = await axios.post('/api/create-collections', {
-        shop_domain: this.form.shop_domain,
-        access_token: this.form.access_token,
-        collections: collectionsArray
-      });
+                const collectionsArray = JSON.parse(this.jsonInput);
 
-      // Backend response safe fallback
-      this.results = response.data.results || response.data.data || [];
+                const response = await axios.post('/api/create-collections', {
+                    shop_domain: this.form.shop_domain,
+                    access_token: this.form.access_token,
+                    collections: collectionsArray
+                });
 
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || 'Error executing request.';
-      alert(errorMsg);
-      this.results = [{
-        title: 'System Error',
-        status: 'failed',
-        message: errorMsg
-      }];
-    } finally {
-      this.loading = false;
+                this.results = response.data.results || response.data.data || [];
+
+                const hasError = this.results.some(item => item.status && item.status !== 'success');
+
+                if (hasError) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Notice ⚠️', `Some collections failed. Completed in ${this.elapsedTime}s.`, 'error');
+                    }
+                } else {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('Success! 🎉', `All collections created successfully in ${this.elapsedTime}s!`, 'success');
+                    }
+                }
+
+            } catch (error) {
+                const errorMsg = error.response?.data?.message || 'Error executing request.';
+
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Oops... ❌', `${errorMsg} (Took ${this.elapsedTime}s)`, 'error');
+                }
+
+                this.results = [{
+                    title: 'System Error',
+                    status: 'failed',
+                    message: errorMsg
+                }];
+            } finally {
+                this.loading = false;
+                this.stopTimer(); // টাইমার বন্ধ করা হলো
+            }
+        }
     }
-  }
-}
 }
 </script>
