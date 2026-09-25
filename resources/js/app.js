@@ -1,4 +1,9 @@
 import { createApp } from 'vue';
-import CollectionApp from './components/CollectionApp.vue';
+import AutomationDashboard from './components/AutomationDashboard.vue';
 
-createApp(CollectionApp).mount('#app');
+const app = createApp({});
+
+// AutomationDashboard কম্পোনেন্টটি রেজিস্টার করা হলো
+app.component('automation-dashboard', AutomationDashboard);
+
+app.mount('#app');

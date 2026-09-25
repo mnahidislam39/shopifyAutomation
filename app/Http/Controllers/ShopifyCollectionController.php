@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use App\Models\ShopifyCollection;
 
 class ShopifyCollectionController extends Controller
 {
@@ -16,96 +15,87 @@ class ShopifyCollectionController extends Controller
 
         if (!$shopDomain || !$accessToken) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Shop domain and access token are required.'
+                'success' => false,
+                'message' => 'Shop domain and Access token are required.'
             ], 400);
         }
 
         $results = [];
 
-        foreach ($collections as $item) {
-            $type = $item['type'] ?? 'custom';
+        foreach ($collections as $collection) {
+            $title = $collection['title'] ?? null;
+            $type = strtolower($collection['type'] ?? 'custom');
+            $handle = $collection['handle'] ?? null;
+            $description = $collection['description'] ?? '';
+            $templateSuffix = $collection['template_suffix'] ?? null;
+            $imageUrl = $collection['image_url'] ?? null;
 
-            $endpoint = $type === 'smart'
-                ? "https://{$shopDomain}/admin/api/2026-07/smart_collections.json"
-                : "https://{$shopDomain}/admin/api/2026-07/custom_collections.json";
-
-            $payloadKey = $type === 'smart' ? 'smart_collection' : 'custom_collection';
-
-            // 1. Mandatory / Core Payload
-            $collectionData = [
-                'title'  => $item['title'],
-                'handle' => $item['handle'] ?? null,
-            ];
-
-            // 2. OPTIONAL: Description (HTML formatting supported)
-            if (!empty($item['description'])) {
-                $collectionData['body_html'] = $item['description'];
+            if (!$title) {
+                continue;
             }
 
-            // 3. OPTIONAL: Theme Template (e.g., 'custom-layout' or null for 'Default collection')
-            if (!empty($item['template_suffix'])) {
-                $collectionData['template_suffix'] = $item['template_suffix'];
-            }
+            try {
+                if ($type === 'smart') {
+                    $payload = [
+                        'smart_collection' => [
+                            'title' => $title,
+                            'body_html' => $description,
+                            'rules' => $collection['rules'] ?? []
+                        ]
+                    ];
 
-            // 4. OPTIONAL: Collection Featured Image
-            if (!empty($item['image_url'])) {
-                $collectionData['image'] = [
-                    'src' => $item['image_url'],
-                    'alt' => $item['image_alt'] ?? $item['title'] // Optional image alt text
-                ];
-            }
+                    if ($handle) $payload['smart_collection']['handle'] = $handle;
+                    if ($templateSuffix) $payload['smart_collection']['template_suffix'] = $templateSuffix;
+                    if ($imageUrl) $payload['smart_collection']['image'] = ['src' => $imageUrl];
 
-            // 5. Smart Collection Rules
-            if ($type === 'smart' && isset($item['rules'])) {
-                $collectionData['rules'] = $item['rules'];
-            }
+                    $response = Http::withHeaders([
+                        'X-Shopify-Access-Token' => $accessToken,
+                        'Content-Type' => 'application/json',
+                    ])->post("https://{$shopDomain}/admin/api/2026-01/smart_collections.json", $payload);
 
-            $payload = [$payloadKey => $collectionData];
+                } else {
+                    $payload = [
+                        'custom_collection' => [
+                            'title' => $title,
+                            'body_html' => $description,
+                        ]
+                    ];
 
-            // Shopify API Request
-            $response = Http::withHeaders([
-                'X-Shopify-Access-Token' => $accessToken,
-                'Content-Type' => 'application/json',
-            ])->post($endpoint, $payload);
+                    if ($handle) $payload['custom_collection']['handle'] = $handle;
+                    if ($templateSuffix) $payload['custom_collection']['template_suffix'] = $templateSuffix;
+                    if ($imageUrl) $payload['custom_collection']['image'] = ['src' => $imageUrl];
 
-            if ($response->successful()) {
-                $data = $response->json()[$payloadKey];
+                    $response = Http::withHeaders([
+                        'X-Shopify-Access-Token' => $accessToken,
+                        'Content-Type' => 'application/json',
+                    ])->post("https://{$shopDomain}/admin/api/2026-01/custom_collections.json", $payload);
+                }
 
-                ShopifyCollection::create([
-                    'shop_domain' => $shopDomain,
-                    'shopify_id'  => $data['id'] ?? null,
-                    'title'       => $item['title'],
-                    'handle'      => $item['handle'] ?? null,
-                    'type'        => $type,
-                    'status'      => 'success',
-                ]);
+                if ($response->successful()) {
+                    $results[] = [
+                        'title' => $title,
+                        'status' => 'success',
+                        'message' => 'Collection Created Successfully'
+                    ];
+                } else {
+                    $results[] = [
+                        'title' => $title,
+                        'status' => 'failed',
+                        'message' => json_encode($response->json()['errors'] ?? $response->body())
+                    ];
+                }
 
+            } catch (\Exception $e) {
                 $results[] = [
-                    'title'  => $item['title'],
-                    'status' => 'success',
-                    'data'   => $data
-                ];
-            } else {
-                ShopifyCollection::create([
-                    'shop_domain' => $shopDomain,
-                    'shopify_id'  => null,
-                    'title'       => $item['title'],
-                    'handle'      => $item['handle'] ?? null,
-                    'type'        => $type,
-                    'status'      => 'failed',
-                ]);
-
-                $results[] = [
-                    'title'  => $item['title'],
-                    'status' => 'error',
-                    'error'  => $response->json()
+                    'title' => $title,
+                    'status' => 'failed',
+                    'message' => $e->getMessage()
                 ];
             }
         }
 
         return response()->json([
-            'message' => 'Bulk collection creation process completed.',
+            'success' => true,
             'results' => $results
         ]);
     }
