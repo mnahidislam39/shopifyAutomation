@@ -77,7 +77,7 @@ class ShopifyMenuController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Menu created successfully in Shopify Store!',
+                'message' => 'Menu and nested sub-menus created successfully!',
                 'data' => $responseData['data']['menuCreate']['menu'] ?? null
             ]);
 
@@ -89,6 +89,7 @@ class ShopifyMenuController extends Controller
         }
     }
 
+    // Recursive function to handle nested sub-menus
     private function formatMenuItemsForGraphQL(array $items, string $shopDomain, string $accessToken): array
     {
         $formatted = [];
@@ -103,12 +104,13 @@ class ShopifyMenuController extends Controller
                 'url' => $this->normalizeUrl($url, $shopDomain)
             ];
 
-            // Collection or Page er Resource GID fetch kore set kora
+            // Fetch Resource ID for native icons
             $resourceId = $this->fetchResourceId($url, $type, $shopDomain, $accessToken);
             if ($resourceId) {
                 $node['resourceId'] = $resourceId;
             }
 
+            // Recursive check for sub-menus inside sub-menus
             if (!empty($item['items']) && is_array($item['items'])) {
                 $node['items'] = $this->formatMenuItemsForGraphQL($item['items'], $shopDomain, $accessToken);
             }
@@ -151,7 +153,6 @@ class ShopifyMenuController extends Controller
         return "https://{$shopDomain}" . (Str::startsWith($url, '/') ? '' : '/') . $url;
     }
 
-    // Dynamic ID fetcher (Collection & Page Resource ID for Native Icon)
     private function fetchResourceId(string $url, string $type, string $shopDomain, string $accessToken): ?string
     {
         if ($type === 'COLLECTION') {
