@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-4xl mx-auto my-10 bg-white p-8 border border-gray-200 rounded-xl shadow-sm relative">
     <h2 class="text-2xl font-bold text-slate-800 text-center mb-6">
-      Shopify Header & Navigation Creator (Nested Sub-menus)
+      Shopify Navigation Creator (Nested Sub-menus)
     </h2>
 
     <form @submit.prevent="submitMenu" class="space-y-5">
@@ -107,7 +107,7 @@
         class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow-md transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
       >
         <span v-if="loading" class="animate-spin text-lg">🕒</span>
-        <span>{{ loading ? `Creating Navigation (${elapsedTime}s)...` : 'Create Navigation Menu' }}</span>
+        <span>{{ loading ? `Creating Navigation (${elapsedTime}s)...` : '⚡Start Processing' }}</span>
       </button>
     </form>
   </div>

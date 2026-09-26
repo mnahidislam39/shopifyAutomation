@@ -47,7 +47,7 @@
             <button type="submit" :disabled="loading"
                 class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
                 <span v-if="loading" class="animate-spin text-lg">🕒</span>
-                <span>{{ loading ? `Processing (${elapsedTime}s)...` : 'Run Bulk Creation' }}</span>
+                <span>{{ loading ? `Processing (${elapsedTime}s)...` : '⚡Start Processing' }}</span>
             </button>
         </form>
 

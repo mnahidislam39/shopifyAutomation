@@ -79,6 +79,7 @@ class ShopifyMenuController extends Controller
             ], 500);
         }
     }
+
     public function createMenu(Request $request)
     {
         $shopDomain  = $request->input('shop_domain');
@@ -148,14 +149,13 @@ class ShopifyMenuController extends Controller
 
             $createdMenu = $responseData['data']['menuCreate']['menu'] ?? null;
 
-            // ---> EKHANE LOCAL DATABASE-E SAVE KORAR KAJ <---
             if ($createdMenu) {
                 ShopifyMenu::create([
                     'shop_domain'     => $shopDomain,
                     'menu_title'      => $menuTitle,
                     'menu_handle'     => $createdMenu['handle'] ?? $menuHandle,
-                    'menu_items'      => $menuItems,         // Frontend theke asha items array
-                    'shopify_menu_id' => $createdMenu['id'], // Shopify GID
+                    'menu_items'      => $menuItems,
+                    'shopify_menu_id' => $createdMenu['id'],
                 ]);
             }
 
@@ -173,7 +173,7 @@ class ShopifyMenuController extends Controller
         }
     }
 
-    // Recursive function to handle nested sub-menus
+    // Recursive function to handle nested sub-menus with safety checks
     private function formatMenuItemsForGraphQL(array $items, string $shopDomain, string $accessToken): array
     {
         $formatted = [];
@@ -182,14 +182,15 @@ class ShopifyMenuController extends Controller
             $url  = (string) ($item['url'] ?? '/');
             $type = $this->detectMenuItemType($url);
 
+            // Fetch Resource ID & Auto Fallback to '#' if resource doesn't exist
+            $resourceId = $this->fetchResourceId($url, $type, $shopDomain, $accessToken);
+
             $node = [
                 'title' => (string) ($item['title'] ?? 'Menu Item'),
                 'type'  => $type,
                 'url'   => $this->normalizeUrl($url, $shopDomain),
             ];
 
-            // Fetch Resource ID for native icons
-            $resourceId = $this->fetchResourceId($url, $type, $shopDomain, $accessToken);
             if ($resourceId) {
                 $node['resourceId'] = $resourceId;
             }
@@ -207,8 +208,8 @@ class ShopifyMenuController extends Controller
 
     private function detectMenuItemType(string $url): string
     {
-        if ($url === '/' || $url === '') {
-            return 'FRONTPAGE';
+        if ($url === '/' || $url === '' || $url === '#') {
+            return 'HTTP';
         }
         if ($url === '/collections/all' || $url === '/collections') {
             return 'CATALOG';
@@ -231,13 +232,16 @@ class ShopifyMenuController extends Controller
 
     private function normalizeUrl(string $url, string $shopDomain): string
     {
+        if ($url === '#') {
+            return '#';
+        }
         if (Str::startsWith($url, 'http://') || Str::startsWith($url, 'https://')) {
             return $url;
         }
         return "https://{$shopDomain}" . (Str::startsWith($url, '/') ? '' : '/') . $url;
     }
 
-    private function fetchResourceId(string $url, string $type, string $shopDomain, string $accessToken): ?string
+    private function fetchResourceId(string &$url, string &$type, string $shopDomain, string $accessToken): ?string
     {
         if ($type === 'COLLECTION') {
             $handle = Str::after($url, '/collections/');
@@ -255,6 +259,10 @@ class ShopifyMenuController extends Controller
 
             if (! empty($collections[0]['id'])) {
                 return "gid://shopify/Collection/" . $collections[0]['id'];
+            } else {
+                $url  = '#';
+                $type = 'HTTP';
+                return null;
             }
         }
 
@@ -268,7 +276,19 @@ class ShopifyMenuController extends Controller
             $pages = $res->json()['pages'] ?? [];
             if (! empty($pages[0]['id'])) {
                 return "gid://shopify/Page/" . $pages[0]['id'];
+            } else {
+                $url  = '#';
+                $type = 'HTTP';
+                return null;
             }
+        }
+
+        // Blog এবং Product এর জন্যও সেইম সেফটি ফ্যালব্যাক চেক যোগ করা হলো
+        if ($type === 'BLOG' || $type === 'PRODUCT') {
+            // শপিফাইতে ব্লগ বা প্রোডাক্ট না থাকলে সরাসরি HTTP টাইপে কনভার্ট করে '#' বানিয়ে দিবে
+            $url  = '#';
+            $type = 'HTTP';
+            return null;
         }
 
         return null;
