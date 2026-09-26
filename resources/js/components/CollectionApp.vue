@@ -28,55 +28,60 @@
                     required></textarea>
             </div>
 
-            <!-- Live Timer & Progress Bar (Visible when loading) -->
-            <div v-if="loading"
-                class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between shadow-inner transition-all">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl animate-spin">⏳</span>
-                    <div>
-                        <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Processing Request...</p>
-                        <p class="text-sm font-mono font-semibold text-emerald-900">Time Elapsed: {{ elapsedTime }}s</p>
-                    </div>
-                </div>
-                <div class="w-32 bg-emerald-200 rounded-full h-2.5 overflow-hidden">
-                    <div class="bg-emerald-600 h-2.5 rounded-full animate-pulse w-full"></div>
-                </div>
-            </div>
-
             <!-- Submit Button -->
             <button type="submit" :disabled="loading"
                 class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
                 <span v-if="loading" class="animate-spin text-lg">🕒</span>
-                <span>{{ loading ? `Processing (${elapsedTime}s)...` : '⚡Start Processing' }}</span>
+                <span>{{ loading ? `Processing...` : '⚡Start Processing' }}</span>
             </button>
         </form>
 
-        <!-- Execution & Database Status Summary & Grid List -->
-        <div v-if="results && results.length" class="mt-8 pt-6 border-t border-gray-200">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-slate-800">Execution & Database Status:</h3>
-                <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
-                    Total Created: {{ results.length }}
-                </span>
-            </div>
+        <!-- Middle Overlay Popup Modal -->
+        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 m-4 transform transition-all">
 
-            <!-- Grid Layout to Save Vertical Space -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div v-for="(item, index) in results" :key="index" :class="[
-                    'p-3 rounded-lg border text-xs transition-all flex flex-col justify-between shadow-xs',
-                    item.status === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'
-                ]">
-                    <div>
-                        <span class="font-bold block truncate text-sm mb-1" :title="item.title">{{ item.title }}</span>
-                        <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                            :class="item.status === 'success' ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'">
-                            {{ item.status ? item.status : 'ERROR' }}
-                        </span>
+                <!-- Loading / Processing State -->
+                <div v-if="loading" class="text-center py-6">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-emerald-600 border-t-transparent mb-4"></div>
+                    <h3 class="text-lg font-bold text-gray-800">Processing Collections...</h3>
+                    <p class="text-sm text-gray-500 mt-1">Please wait while we push collections to Shopify.</p>
+
+                    <div class="mt-6 bg-gray-100 rounded-lg p-3 flex justify-around text-sm font-medium text-gray-700">
+                        <div>⏱️ Time Taken: <span class="text-emerald-600 font-bold">{{ elapsedTime }}s</span></div>
+                        <div>📦 Total Items: <span class="text-emerald-600 font-bold">{{ totalItemsCount }}</span></div>
                     </div>
-                    <span v-if="item.message" class="mt-2 text-[11px] opacity-80 truncate" :title="item.message">
-                        {{ item.message }}
-                    </span>
                 </div>
+
+                <!-- Completed State -->
+                <div v-else class="py-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-slate-800">Batch Operation Completed</h3>
+                        <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 text-xl font-bold cursor-pointer">&times;</button>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex justify-between">
+                        <span>Total Time Taken: <b class="text-emerald-600">{{ elapsedTime }} seconds</b></span>
+                        <span>Total Processed: <b class="text-emerald-600">{{ results.length }} items</b></span>
+                    </div>
+
+                    <!-- Result Grid List -->
+                    <div class="max-h-60 overflow-y-auto space-y-2 mb-5 pr-1">
+                        <div v-for="(item, index) in results" :key="index" class="p-3 rounded-lg text-xs flex items-start justify-between border" :class="item.status === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'">
+                           <div>
+                               <span class="font-bold block text-sm mb-0.5">{{ item.title }}</span>
+                               <span class="text-[11px] opacity-80">{{ item.message || (item.status === 'success' ? 'Successfully created collection' : 'Failed to create') }}</span>
+                           </div>
+                           <span class="font-bold px-2 py-1 rounded text-[10px] uppercase" :class="item.status === 'success' ? 'bg-emerald-200 text-emerald-900' : 'bg-rose-200 text-rose-900'">
+                               {{ item.status || 'ERROR' }}
+                           </span>
+                        </div>
+                    </div>
+
+                    <button @click="showModal = false" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition shadow cursor-pointer">
+                        Close / Done
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
@@ -108,7 +113,9 @@ export default {
             ], null, 2),
             loading: false,
             results: [],
+            showModal: false,
             elapsedTime: 0,
+            totalItemsCount: 0,
             timerInterval: null
         }
     },
@@ -127,12 +134,28 @@ export default {
             }
         },
         async submitCollections() {
+            let collectionsArray;
+            try {
+                collectionsArray = JSON.parse(this.jsonInput);
+            } catch (e) {
+                this.results = [{
+                    title: 'Invalid JSON Payload',
+                    status: 'failed',
+                    message: 'Please check your JSON syntax. ' + e.message
+                }];
+                this.totalItemsCount = 0;
+                this.elapsedTime = 0;
+                this.loading = false;
+                this.showModal = true;
+                return;
+            }
+
             try {
                 this.loading = true;
                 this.results = [];
-                this.startTimer(); // টাইমার চালু করা হলো
-
-                const collectionsArray = JSON.parse(this.jsonInput);
+                this.showModal = true;
+                this.totalItemsCount = collectionsArray.length;
+                this.startTimer();
 
                 const response = await axios.post('/api/create-collections', {
                     shop_domain: this.form.shop_domain,
@@ -140,35 +163,20 @@ export default {
                     collections: collectionsArray
                 });
 
+                this.stopTimer();
+                this.loading = false;
                 this.results = response.data.results || response.data.data || [];
 
-                const hasError = this.results.some(item => item.status && item.status !== 'success');
-
-                if (hasError) {
-                    if (typeof window.showToast === 'function') {
-                        window.showToast('Notice ⚠️', `Some collections failed. Completed in ${this.elapsedTime}s.`, 'error');
-                    }
-                } else {
-                    if (typeof window.showToast === 'function') {
-                        window.showToast('Success! 🎉', `All collections created successfully in ${this.elapsedTime}s!`, 'success');
-                    }
-                }
-
             } catch (error) {
-                const errorMsg = error.response?.data?.message || 'Error executing request.';
-
-                if (typeof window.showToast === 'function') {
-                    window.showToast('Oops... ❌', `${errorMsg} (Took ${this.elapsedTime}s)`, 'error');
-                }
+                this.stopTimer();
+                this.loading = false;
+                const errorMsg = error.response?.data?.message || error.message;
 
                 this.results = [{
                     title: 'System Error',
                     status: 'failed',
                     message: errorMsg
                 }];
-            } finally {
-                this.loading = false;
-                this.stopTimer(); // টাইমার বন্ধ করা হলো
             }
         }
     }

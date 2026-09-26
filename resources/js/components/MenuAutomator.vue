@@ -86,20 +86,6 @@
         ></textarea>
       </div>
 
-      <!-- Live Timer & Progress Bar (Visible when loading) -->
-      <div v-if="loading" class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between shadow-inner transition-all">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl animate-spin">⏳</span>
-          <div>
-            <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Creating Menu...</p>
-            <p class="text-sm font-mono font-semibold text-emerald-900">Time Elapsed: {{ elapsedTime }}s</p>
-          </div>
-        </div>
-        <div class="w-32 bg-emerald-200 rounded-full h-2.5 overflow-hidden">
-          <div class="bg-emerald-600 h-2.5 rounded-full animate-pulse w-full"></div>
-        </div>
-      </div>
-
       <!-- Submit Button -->
       <button
         type="submit"
@@ -107,9 +93,58 @@
         class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow-md transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
       >
         <span v-if="loading" class="animate-spin text-lg">🕒</span>
-        <span>{{ loading ? `Creating Navigation (${elapsedTime}s)...` : '⚡Start Processing' }}</span>
+        <span>{{ loading ? 'Creating Navigation...' : '⚡ Start Processing' }}</span>
       </button>
     </form>
+
+    <!-- Middle Overlay Popup Modal -->
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 m-4 transform transition-all">
+
+        <!-- Loading / Processing State -->
+        <div v-if="loading" class="text-center py-6">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-emerald-600 border-t-transparent mb-4"></div>
+          <h3 class="text-lg font-bold text-gray-800">Creating Navigation Menu...</h3>
+          <p class="text-sm text-gray-500 mt-1">Please wait while we set up nested menus in Shopify.</p>
+
+          <div class="mt-6 bg-gray-100 rounded-lg p-3 flex justify-around text-sm font-medium text-gray-700">
+            <div>⏱️ Time Taken: <span class="text-emerald-600 font-bold">{{ elapsedTime }}s</span></div>
+            <div>📦 Status: <span class="text-emerald-600 font-bold">Processing</span></div>
+          </div>
+        </div>
+
+        <!-- Completed State -->
+        <div v-else class="py-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-900">Operation Summary</h3>
+            <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex justify-between">
+            <span>Total Time Taken: <b class="text-emerald-600">{{ elapsedTime }} seconds</b></span>
+          </div>
+
+          <!-- Result Items List -->
+          <div class="max-h-60 overflow-y-auto space-y-2 mb-5 pr-1">
+            <div v-for="(res, index) in results" :key="index" class="p-3 rounded-lg text-xs flex items-start justify-between border" :class="res.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'">
+               <div>
+                   <span class="font-bold block text-sm">{{ res.title }}</span>
+                   <span class="text-[11px] opacity-90">{{ res.message }}</span>
+               </div>
+               <span class="font-bold px-2 py-1 rounded text-[10px]" :class="res.success ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900'">
+                   {{ res.success ? 'SUCCESS' : 'FAILED' }}
+               </span>
+            </div>
+          </div>
+
+          <button @click="showModal = false" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition shadow cursor-pointer">
+            Close / Done
+          </button>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -171,7 +206,9 @@ export default {
       loading: false,
       fetching: false,
       elapsedTime: 0,
-      timerInterval: null
+      timerInterval: null,
+      showModal: false,
+      results: []
     };
   },
   methods: {
@@ -243,28 +280,58 @@ export default {
     },
 
     async submitMenu() {
+      let parsedItems;
       try {
-        this.loading = true;
-        this.startTimer();
+        parsedItems = JSON.parse(this.jsonInput);
+      } catch (e) {
+        this.results = [{
+          title: 'Invalid JSON Payload',
+          success: false,
+          message: 'Please check your JSON syntax. ' + e.message
+        }];
+        this.elapsedTime = 0;
+        this.loading = false;
+        this.showModal = true;
+        return;
+      }
 
+      this.loading = true;
+      this.results = [];
+      this.showModal = true;
+      this.startTimer();
+
+      try {
         const response = await axios.post('/api/create-menu', {
           shop_domain: this.form.shop_domain,
           access_token: this.form.access_token,
           title: this.form.menu_title,
-          items: JSON.parse(this.jsonInput)
+          items: parsedItems
         });
 
-        if (typeof window.showToast === 'function') {
-          window.showToast('Success! 🎉', `${response.data.message || 'Menu created successfully!'} (Took ${this.elapsedTime}s)`, 'success');
+        this.stopTimer();
+        this.loading = false;
+
+        if (response.data.success) {
+          this.results = [{
+            title: this.form.menu_title,
+            success: true,
+            message: response.data.message || 'Menu created successfully!'
+          }];
+        } else {
+          this.results = [{
+            title: this.form.menu_title,
+            success: false,
+            message: response.data.message || 'Failed to create menu.'
+          }];
         }
       } catch (error) {
-        const errorMsg = error.response?.data?.message || 'Failed to create menu.';
-        if (typeof window.showToast === 'function') {
-          window.showToast('Oops... ❌', `${errorMsg} (Took ${this.elapsedTime}s)`, 'error');
-        }
-      } finally {
-        this.loading = false;
         this.stopTimer();
+        this.loading = false;
+        this.results = [{
+          title: this.form.menu_title,
+          success: false,
+          message: error.response?.data?.message || error.message
+        }];
       }
     }
   }

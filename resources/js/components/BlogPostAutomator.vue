@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-lg mt-8">
+  <div class="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-lg mt-8 relative">
     <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
       Shopify Bulk Blog Posts Automator
     </h2>
@@ -82,6 +82,56 @@
         </div>
       </div>
     </div>
+
+    <!-- Middle Overlay Popup Modal -->
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 m-4 transform transition-all">
+
+        <!-- Loading / Processing State -->
+        <div v-if="loading" class="text-center py-6">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-green-600 border-t-transparent mb-4"></div>
+          <h3 class="text-lg font-bold text-gray-800">Publishing Blog Posts...</h3>
+          <p class="text-sm text-gray-500 mt-1">Please wait while we push data to Shopify.</p>
+
+          <div class="mt-6 bg-gray-100 rounded-lg p-3 flex justify-around text-sm font-medium text-gray-700">
+            <div>⏱️ Time Taken: <span class="text-green-600 font-bold">{{ elapsedTime }}s</span></div>
+            <div>📦 Total Posts: <span class="text-green-600 font-bold">{{ totalPostsCount }}</span></div>
+          </div>
+        </div>
+
+        <!-- Completed State -->
+        <div v-else class="py-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-900">Batch Operation Completed</h3>
+            <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex justify-between">
+            <span>Total Time: <b class="text-green-600">{{ elapsedTime }} seconds</b></span>
+            <span>Processed: <b class="text-green-600">{{ results.length }} items</b></span>
+          </div>
+
+          <!-- Result Items List -->
+          <div class="max-h-60 overflow-y-auto space-y-2 mb-5 pr-1">
+            <div v-for="(res, index) in results" :key="index" class="p-2.5 rounded-lg text-xs flex items-start justify-between border" :class="res.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'">
+               <div>
+                   <span class="font-bold block">{{ res.title }}</span>
+                   <span class="text-[11px] opacity-80">{{ res.success ? 'Successfully published' : res.message }}</span>
+               </div>
+               <span class="font-bold px-1.5 py-0.5 rounded text-[10px]" :class="res.success ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900'">
+                   {{ res.success ? 'SUCCESS' : 'FAILED' }}
+               </span>
+            </div>
+          </div>
+
+          <button @click="showModal = false" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition shadow">
+            Close / Done
+          </button>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -124,22 +174,52 @@ export default {
         ], null, 2)
       },
       loading: false,
-      results: []
+      results: [],
+      showModal: false,
+      elapsedTime: 0,
+      totalPostsCount: 0,
+      timerInterval: null
     };
   },
   methods: {
+    startTimer() {
+      this.elapsedTime = 0;
+      if (this.timerInterval) clearInterval(this.timerInterval);
+      this.timerInterval = setInterval(() => {
+        this.elapsedTime++;
+      }, 1000);
+    },
+    stopTimer() {
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    },
     async submitBlogPosts() {
-      this.loading = true;
-      this.results = [];
-
       let parsedPosts;
+
+      // JSON ফরম্যাট ভুল থাকলে অ্যালার্ট না দেখিয়ে পপআপে ফেইল্ড দেখাবে
       try {
         parsedPosts = JSON.parse(this.form.posts_json);
       } catch (e) {
-        alert('Invalid JSON format in posts payload! Please fix the syntax.');
+        this.results = [{
+          title: 'Invalid JSON Payload',
+          success: false,
+          message: 'Please check your JSON syntax. ' + e.message
+        }];
+        this.totalPostsCount = 0;
+        this.elapsedTime = 0;
         this.loading = false;
+        this.showModal = true;
         return;
       }
+
+      this.loading = true;
+      this.results = [];
+      this.showModal = true;
+      this.totalPostsCount = parsedPosts.length;
+
+      this.startTimer();
 
       try {
         const response = await axios.post('/api/shopify/bulk-blog-posts', {
@@ -148,6 +228,9 @@ export default {
           blog_title: this.form.blog_title,
           posts: parsedPosts
         });
+
+        this.stopTimer();
+        this.loading = false;
 
         if (response.data.success) {
           this.results = response.data.results || [];
@@ -159,13 +242,13 @@ export default {
           }];
         }
       } catch (error) {
+        this.stopTimer();
+        this.loading = false;
         this.results = [{
           title: 'Request Exception',
           success: false,
           message: error.response?.data?.message || error.message
         }];
-      } finally {
-        this.loading = false;
       }
     }
   }
